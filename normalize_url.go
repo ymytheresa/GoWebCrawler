@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -30,7 +29,7 @@ func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 
 	hrefs := getHrefs(htmlNodes)
 
-	rawBaseURL, _ = normalizeURL(rawBaseURL)
+	// rawBaseURL, _ = normalizeURL(rawBaseURL)
 	res, err := convertToAllAbsUrl(hrefs, rawBaseURL)
 	return res, err
 }
@@ -56,9 +55,8 @@ func getHrefs(node *html.Node) []string {
 }
 
 func convertToAllAbsUrl(hrefs []string, rawUrl string) ([]string, error) {
-	res := make([]string, len(hrefs))
+	res := make([]string, 0)
 	host := "https://" + getHost(rawUrl)
-	fmt.Println(host)
 	var err error
 	for _, h := range hrefs {
 		h, err = convertToAbs(h, host)
@@ -69,14 +67,14 @@ func convertToAllAbsUrl(hrefs []string, rawUrl string) ([]string, error) {
 
 func getHost(raw string) string {
 	s, _ := url.Parse(raw)
-	fmt.Println(s.Host)
 	return s.Host
 }
 
 func convertToAbs(href string, host string) (string, error) {
 	if strings.HasPrefix(href, "http") {
-		return normalizeURL(href)
+		href, _ = normalizeURL(href)
 	} else {
-		return normalizeURL((host + href))
+		href, _ = normalizeURL((host + href))
 	}
+	return "https://" + href, nil
 }
