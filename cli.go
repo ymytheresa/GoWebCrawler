@@ -1,16 +1,23 @@
 package main
 
 import (
-	"bufio"
+	"fmt"
 	"os"
-	"strings"
 )
 
-func receiveCli(){
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		command, _ := reader. ReadString('\n')
-		commandSlice := strings.Fields(command)
-		switch len(commandSlice)
+func receiveCli() {
+	args := os.Args[1:]
+	cmdCount := len(args)
+
+	switch {
+	case cmdCount < 1:
+		fmt.Println("no website provided")
+		os.Exit(1)
+	case cmdCount > 1:
+		fmt.Println("too many arguments provided")
+		os.Exit(1)
+	default:
+		crawlHtml(args[0]) // Use the first command-line argument
 	}
+
 }
