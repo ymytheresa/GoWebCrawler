@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -27,7 +28,7 @@ func crawlHtml(u string, maxConcurrent int, maxPages int) {
 	wgp.Add(1)
 	go cfg.crawlPage(u)
 	wgp.Wait()
-	printVisied(visited)
+	printVisied(visited, baseUrl.String())
 	os.Exit(0)
 }
 
@@ -94,10 +95,25 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 	}
 }
 
-func printVisied(pages map[string]int) {
-	for k, v := range pages {
-		fmt.Printf("%s : %d\n", k, v)
+func printVisied(pages map[string]int, u string) {
+	// Define the header and footer
+	headerFooter := strings.Repeat("=", 29) // Repeat "=" 29 times
+	reportTitle := fmt.Sprintf("REPORT for %s", u)
+
+	// Print the header
+	fmt.Println(headerFooter)
+	fmt.Println(reportTitle)
+	fmt.Println(headerFooter)
+
+	sortedPages := sortMap(pages)
+	for _, page := range sortedPages {
+		fmt.Printf("Found %d internal links to %s\n", page.Value, page.Key)
 	}
+}
+
+type KeyValue struct {
+	Key   string
+	Value int
 }
 
 func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
@@ -118,4 +134,28 @@ func (cfg *config) checkLength() bool {
 	defer cfg.mu.Unlock()
 
 	return len(cfg.pages) >= cfg.maxPages
+}
+
+func sortMap(p map[string]int) []KeyValue {
+
+	var res []KeyValue
+
+	for k, v := range p {
+		res = append(res, KeyValue{
+			Key:   k,
+			Value: v,
+		})
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].Value == res[j].Value {
+			// If Values are equal, sort alphabetically by URL
+			return res[i].Key < res[j].Key
+		}
+		// Sort by Value in descending order
+		return res[i].Value > res[j].Value
+	})
+
+	//sort by
+	return res
 }
