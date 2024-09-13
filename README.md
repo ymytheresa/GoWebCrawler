@@ -45,3 +45,31 @@ Through this project, I aim to:
    go build
    ```
 
+### Usage
+```
+./GoWebCrawler <URL> <maxConcurrent> <maxPages>
+```
+
+- **`<URL>`**: The starting URL for the crawl. This should be a valid URL (e.g., `https://example.com`).
+- **`<maxConcurrent>`**: The maximum number of concurrent requests the crawler will make. This helps control the load on the target server. For example, you might set this to `10` to allow up to 10 simultaneous requests.
+- **`<maxPages>`**: The maximum number of pages to crawl. This limits the total number of pages the crawler will visit. For example, setting this to `100` will stop the crawl after visiting 100 pages.
+
+### Example
+
+To start crawling a website, you can run the following command:
+```
+./GoWebCrawler https://example.com 10 100
+```
+This command will:
+- Start crawling from `https://example.com`.
+- Allow up to `10` concurrent requests.
+- Stop after crawling a maximum of `100` pages.
+
+### Output
+
+The crawler will output a report of the internal links found, formatted as follows:
+```
+Found 3 internal links to https://example.com/page1
+Found 2 internal links to https://example.com/page2
+...
+```
