@@ -10,18 +10,19 @@ import (
 	"sync"
 )
 
-func crawlHtml(u string) {
+func crawlHtml(u string, maxConcurrent int, maxPages int) {
 	fmt.Printf("starting crawl of: %s\n", u)
 	visited := make(map[string]int, 0)
 	baseUrl, _ := url.Parse(u)
 	var wgp sync.WaitGroup
-	channel := make(chan struct{}, 10)
+	channel := make(chan struct{}, maxConcurrent)
 	cfg := config{
 		pages:              visited,
 		baseURL:            baseUrl,
 		mu:                 &sync.Mutex{},
 		concurrencyControl: channel,
 		wg:                 &wgp,
+		maxPages:           maxPages,
 	}
 	wgp.Add(1)
 	go cfg.crawlPage(u)
@@ -62,16 +63,21 @@ type config struct {
 	mu                 *sync.Mutex
 	concurrencyControl chan struct{}
 	wg                 *sync.WaitGroup
+	maxPages           int
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
-	defer cfg.wg.Done()
 	// creat goroutine lock
 	cfg.concurrencyControl <- struct{}{}
 	// release the lock when exit
 	defer func() {
+		cfg.wg.Done()
 		<-cfg.concurrencyControl
 	}()
+	reachedMax := cfg.checkLength()
+	if reachedMax {
+		return
+	}
 	norCurrentUrl, _ := normalizeURL(rawCurrentURL)
 	if getUrlDomain(cfg.baseURL.String()) != getUrlDomain(rawCurrentURL) {
 		return
@@ -102,6 +108,14 @@ func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
 		cfg.pages[normalizedURL]++
 		return false
 	}
+	fmt.Printf("crawling : %s \n", normalizedURL)
 	cfg.pages[normalizedURL]++
 	return true
+}
+
+func (cfg *config) checkLength() bool {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	return len(cfg.pages) >= cfg.maxPages
 }

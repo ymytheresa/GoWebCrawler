@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 func receiveCli() {
@@ -10,14 +11,16 @@ func receiveCli() {
 	cmdCount := len(args)
 
 	switch {
-	case cmdCount < 1:
+	case cmdCount < 3:
 		fmt.Println("no website provided")
 		os.Exit(1)
-	case cmdCount > 1:
+	case cmdCount > 3:
 		fmt.Println("too many arguments provided")
 		os.Exit(1)
 	default:
-		crawlHtml(args[0]) // Use the first command-line argument
+		maxConcurrent, _ := strconv.Atoi(args[1])
+		maxPages, _ := strconv.Atoi(args[2])
+		crawlHtml(args[0], maxConcurrent, maxPages) // Use the first command-line argument
 	}
 
 }
