@@ -51,3 +51,8 @@ func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 
 	return urls, nil
 }
+
+func getUrlDomain(u string) string {
+	parsed, _ := url.Parse(u)
+	return parsed.Host
+}

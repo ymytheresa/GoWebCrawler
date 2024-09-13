@@ -9,9 +9,10 @@ import (
 )
 
 func crawlHtml(url string) {
-	fmt.Printf("starting crawl of: %s", url)
-	htmlbody, _ := getHTML(url)
-	getURLsFromHTML(htmlbody, url)
+	fmt.Printf("starting crawl of: %s\n", url)
+	visited := make(map[string]int, 0)
+	crawlPage(url, url, visited)
+	printVisied(visited)
 	os.Exit(0)
 }
 
@@ -39,4 +40,27 @@ func getHTML(rawURL string) (string, error) {
 	htmlBody := string(htmlBodyBytes)
 
 	return htmlBody, nil
+}
+
+func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+	norCurrentUrl, _ := normalizeURL(rawCurrentURL)
+	if _, found := pages[norCurrentUrl]; found {
+		pages[norCurrentUrl]++
+		return
+	}
+	if getUrlDomain(rawBaseURL) != getUrlDomain(rawCurrentURL) {
+		return
+	}
+	pages[norCurrentUrl]++
+	htmlBody, _ := getHTML(rawCurrentURL)
+	urls, _ := getURLsFromHTML(htmlBody, rawCurrentURL)
+	for _, u := range urls {
+		crawlPage(rawBaseURL, u, pages)
+	}
+}
+
+func printVisied(pages map[string]int) {
+	for k, v := range pages {
+		fmt.Printf("%s : %d\n", k, v)
+	}
 }
