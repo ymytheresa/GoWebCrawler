@@ -4,14 +4,28 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
 
-func crawlHtml(url string) {
-	fmt.Printf("starting crawl of: %s\n", url)
+func crawlHtml(u string) {
+	fmt.Printf("starting crawl of: %s\n", u)
 	visited := make(map[string]int, 0)
-	crawlPage(url, url, visited)
+	baseUrl, _ := url.Parse(u)
+	var wgp sync.WaitGroup
+	channel := make(chan struct{}, 10)
+	cfg := config{
+		pages:              visited,
+		baseURL:            baseUrl,
+		mu:                 &sync.Mutex{},
+		concurrencyControl: channel,
+		wg:                 &wgp,
+	}
+	wgp.Add(1)
+	go cfg.crawlPage(u)
+	wgp.Wait()
 	printVisied(visited)
 	os.Exit(0)
 }
@@ -42,20 +56,35 @@ func getHTML(rawURL string) (string, error) {
 	return htmlBody, nil
 }
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+type config struct {
+	pages              map[string]int
+	baseURL            *url.URL
+	mu                 *sync.Mutex
+	concurrencyControl chan struct{}
+	wg                 *sync.WaitGroup
+}
+
+func (cfg *config) crawlPage(rawCurrentURL string) {
+	defer cfg.wg.Done()
+	// creat goroutine lock
+	cfg.concurrencyControl <- struct{}{}
+	// release the lock when exit
+	defer func() {
+		<-cfg.concurrencyControl
+	}()
 	norCurrentUrl, _ := normalizeURL(rawCurrentURL)
-	if _, found := pages[norCurrentUrl]; found {
-		pages[norCurrentUrl]++
+	if getUrlDomain(cfg.baseURL.String()) != getUrlDomain(rawCurrentURL) {
 		return
 	}
-	if getUrlDomain(rawBaseURL) != getUrlDomain(rawCurrentURL) {
+	if !cfg.addPageVisit(norCurrentUrl) {
 		return
 	}
-	pages[norCurrentUrl]++
+
 	htmlBody, _ := getHTML(rawCurrentURL)
 	urls, _ := getURLsFromHTML(htmlBody, rawCurrentURL)
 	for _, u := range urls {
-		crawlPage(rawBaseURL, u, pages)
+		cfg.wg.Add(1)
+		go cfg.crawlPage(u)
 	}
 }
 
@@ -63,4 +92,16 @@ func printVisied(pages map[string]int) {
 	for k, v := range pages {
 		fmt.Printf("%s : %d\n", k, v)
 	}
+}
+
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	if _, found := cfg.pages[normalizedURL]; found {
+		cfg.pages[normalizedURL]++
+		return false
+	}
+	cfg.pages[normalizedURL]++
+	return true
 }
